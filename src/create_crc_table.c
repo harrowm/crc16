@@ -49,7 +49,7 @@ int main(int argc, char **argv) {
     // then swap the byte order as 68k is little endian
     if (BYTE_ORDER == __LITTLE_ENDIAN__) {
         for (int32_t i = 0; i < N; i++) {
-            tableCRC[i] = tableCRC[i] << 8 | ((tableCRC[i] >> 8) & 0xFF);
+            tableCRC[i] = __builtin_bswap16(tableCRC[i]);
         }
     }
 
