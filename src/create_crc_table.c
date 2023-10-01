@@ -12,7 +12,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#define TABLE_FILENAME "./target/crctable.bin"
+#define TABLE_FILENAME     "../target/crctable.bin"
 
 uint16_t UpdateCRC(uint16_t* table, uint8_t byte, uint16_t prevCRC) {   
     return table[((prevCRC >> 8) ^ byte) & 0xff] ^ (prevCRC << 8);
@@ -22,6 +22,7 @@ uint16_t CalcCRC(uint16_t* table, uint8_t* bytes, int32_t len, uint16_t initValu
     uint16_t prevCRC = initValue;
     for (int i = 0; i < len; i++) {
         prevCRC = UpdateCRC(table, bytes[i], prevCRC);
+        printf("debug: %04X\n", prevCRC);
     }
     return prevCRC;
 }
@@ -32,6 +33,14 @@ int main(int argc, char **argv) {
     const uint16_t mask = (1 << (LengthCRC - 1));
     const int32_t N = 256;
     uint16_t tableCRC[N];
+    uint16_t tableCRC68k[N];
+
+    // Make sure we are running on a big endian processor so that the lookup
+    // table is generated correctly
+    if (BYTE_ORDER == __LITTLE_ENDIAN__) {
+        printf("%s: must be run on a big endian machine (e.g. not a 68000!)\n", argv[0]);   
+        exit(1);             
+    }
 
     // Create the table
     for (int32_t i = 0; i < N; i++) {
@@ -45,32 +54,37 @@ int main(int argc, char **argv) {
         tableCRC[i] = crc;
     }
 
-    // If we are compiling on 68k processor (or cross compiling)
-    // then swap the byte order as 68k is little endian
-    if (BYTE_ORDER == __LITTLE_ENDIAN__) {
-        for (int32_t i = 0; i < N; i++) {
-            tableCRC[i] = __builtin_bswap16(tableCRC[i]);
-        }
+    // write out the table to a file
+    // if ((fp = fopen(TABLE_FILENAME,"wb")) == NULL) {
+    //     printf("%s: can't create file %s\n", argv[0], TABLE_FILENAME);   
+    //     exit(1);             
+    // }
+    // fwrite(tableCRC, sizeof(tableCRC), 1, fp);
+    // fclose(fp);
+
+    // // Clear table and re-read from the file, just to be pedantic
+    // memset(tableCRC, '*', sizeof(tableCRC));
+    // if ((fp = fopen(TABLE_FILENAME,"rb")) == NULL) {
+    //     printf("%s: can't copen file %s\n", argv[0], TABLE_FILENAME);   
+    //     exit(1);             
+    // }
+    // fread(tableCRC, sizeof(tableCRC), 1, fp);
+    // fclose(fp);
+
+    //Create a table for the 68000 with the right endianess
+    for (int32_t i = 0; i < N; i++) {
+        tableCRC68k[i] = __builtin_bswap16(tableCRC[i]);
     }
 
-    // write out the table to a file
+    // .. and write it out to a file for later use in the 68000 assembler code
     FILE *fp;
-
     if ((fp = fopen(TABLE_FILENAME,"wb")) == NULL) {
         printf("%s: can't create file %s\n", argv[0], TABLE_FILENAME);   
         exit(1);             
     }
-    fwrite(tableCRC, sizeof(tableCRC), 1, fp);
+    fwrite(tableCRC68k, sizeof(tableCRC68k), 1, fp);
     fclose(fp);
 
-    // Clear table and re-read from the file, just to be pedantic
-    memset(tableCRC, '*', sizeof(tableCRC));
-    if ((fp = fopen(TABLE_FILENAME,"rb")) == NULL) {
-        printf("%s: can't copen file %s\n", argv[0], TABLE_FILENAME);   
-        exit(1);             
-    }
-    fread(tableCRC, sizeof(tableCRC), 1, fp);
-    fclose(fp);
 
     // Test the calculation
     // Correct result for all 0xFF array should be 0x7FA1 according to
