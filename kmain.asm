@@ -1,5 +1,5 @@
 ; Test the CRC16 Algorithm in 68000 assembler
-; To run this you need the precalculated table in ../target
+; To run this you need the precalculated table in binary format ../target
 ; Malcolm Harrow August 2023
 
     section .text                     
@@ -22,6 +22,9 @@ kmain::
     ;     return prevCRC;
     ; }
 
+    ; this works, but just proved that the gcc compiler can create better machine code than I can ..
+    ; so we just implement as a C header file .. see create_crc_header.c
+
 
     ; whats this for - pushing the start to an address I can easily find in the mame debugger ..
     bra mhstart
@@ -43,7 +46,7 @@ mhstart:
     move.b  (A0)+,D4
     eor.b   D4,D0                     ; eor with byte
 
-    lsl     D0                        ; allow for indexing by word
+    add     D0,D0                     ; allow for indexing by word
     move.w  0(A1,D0.w),D0             ; move value from tableCRC to D0
     eor.w   D3,D0                     ; eor with prevcrc hi byte
     dbra    D1,.loop
