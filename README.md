@@ -11,6 +11,6 @@ and run with:
 
 ```./test```
 
-If you get no messages on teh command line then tests have passed nad the header file can be found here:
+If you get no messages on the command line then tests have passed nad the header file can be found here:
 
 ```./include/crc.h```
